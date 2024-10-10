@@ -1,4 +1,24 @@
 services:
+  pgdb:
+    image: postgres:alpine
+    container_name: postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: bcf24
+      POSTGRES_PASSWORD: bcf24
+      POSTGRES_DB: bcf24
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bcf24"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend_services
+
   mongodb:
     image: mongo:6.0.6
     container_name: 'mongo'
@@ -92,9 +112,17 @@ services:
       timeout: 10s
       retries: 5
     environment:
-      - AI_SERVICE_URL=http://ai-service:5001/
+      - DB_HOST=pgdb
+      - DB_PORT=5432
+      - DB_NAME=bcf24
+      - DB_USER=bcf24
+      - DB_PASSWORD=bcf24
+      - PORT=3002
     networks:
       - backend_services
+    depends_on:
+      pgdb:
+        condition: service_healthy
   store-front:
     build: services/store-front
     container_name: 'store-front'
@@ -157,25 +185,27 @@ services:
     depends_on:
       makeline-service:
         condition: service_healthy
-  ai-service:
-    build: services/ai-service
-    container_name: 'ai-service'
-    restart: always
-    ports:
-      - 5001:5001
-    healthcheck:
-      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://ai-service:5001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    environment:
-      - USE_AZURE_OPENAI=True # set to False if you are not using Azure OpenAI
-      - AZURE_OPENAI_DEPLOYMENT_NAME= # required if using Azure OpenAI
-      - AZURE_OPENAI_ENDPOINT= # required if using Azure OpenAI
-      - OPENAI_API_KEY= # required if using OpenAI and not required if using Azure OpenAI with Azure AD 
-      - OPENAI_ORG_ID= # required if using OpenAI
-    networks:
-      - backend_services
+  # ai-service:
+  #   build: services/ai-service
+  #   container_name: 'ai-service'
+  #   restart: always
+  #   ports:
+  #     - 5001:5001
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://ai-service:5001/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #   environment:
+  #     - USE_AZURE_OPENAI=True # set to False if you are not using Azure OpenAI
+  #     - AZURE_OPENAI_DEPLOYMENT_NAME= # required if using Azure OpenAI
+  #     - AZURE_OPENAI_ENDPOINT= # required if using Azure OpenAI
+  #     - OPENAI_API_KEY= # required if using OpenAI and not required if using Azure OpenAI with Azure AD 
+  #     - OPENAI_ORG_ID= # required if using OpenAI
+  #   networks:
+  #     - backend_services
+volumes:
+  pg-data:
 networks:
   backend_services:
     driver: bridge

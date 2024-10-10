@@ -1,31 +1,28 @@
-FROM rust:1.80.0 AS builder
-
-RUN USER=root cargo new --bin product-service
-
-# Create a new directory for our application
-WORKDIR /product-service
-
-# Copy the source files to the container
-ADD . ./
-
-# Build the application
-RUN cargo build --release
-
-# Create a new stage and copy the binary from the builder stage
-FROM debian:bookworm-slim AS runner
+FROM eclipse-temurin:21.0.1_12-jdk-alpine AS builder
 WORKDIR /app
 
-# Set the build argument for the app version number
-ARG APP_VERSION=0.1.0
+COPY gradle gradle
+COPY gradlew ./
+RUN ./gradlew --version --no-daemon
 
-# Not ideal but needed to execute health checks in docker-compose
-RUN apt-get update && apt-get install -y wget libssl-dev && rm -rf /var/lib/apt/lists/*
+COPY build.gradle settings.gradle ./
+RUN ./gradlew build --no-daemon || return 0
 
-# Copy the binary from the builder stage
-COPY --from=builder /product-service/target/release/product-service /app
+COPY src src
+RUN ./gradlew build -x test --no-daemon
 
-# Set the environment variable for the app version number
-ENV APP_VERSION=$APP_VERSION
+FROM eclipse-temurin:21.0.1_12-jre-alpine AS runtime
+WORKDIR /app
+COPY --from=builder /app/build/libs/*.jar app.jar
 
-# Run the application
-CMD ["./product-service"]
+
+ENV PORT=3002
+ENV DB_HOST=localhost
+ENV DB_PORT=5433
+ENV DB_NAME=bcf24
+ENV DB_USER=bcf24
+ENV DB_PASSWORD=bcf24
+
+
+EXPOSE 3002
+CMD ["java", "-jar", "app.jar"]
