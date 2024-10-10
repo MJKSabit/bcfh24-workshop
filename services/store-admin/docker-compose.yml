@@ -1,3 +1,4 @@
+version: "3.7"
 services:
   mongodb:
     image: mongo:6.0.6
@@ -13,7 +14,7 @@ services:
     networks:
       - backend_services
   rabbitmq:
-    image: rabbitmq:3.13.2-management-alpine
+    image: rabbitmq:3.11.17-management-alpine
     container_name: 'rabbitmq'
     restart: always
     environment:
@@ -28,11 +29,11 @@ services:
       timeout: 10s
       retries: 5
     volumes:
-      - ./rabbitmq_enabled_plugins:/etc/rabbitmq/enabled_plugins
+      - ../../rabbitmq_enabled_plugins:/etc/rabbitmq/enabled_plugins
     networks:
       - backend_services
   order-service:
-    build: services/order-service
+    build: ../order-service
     container_name: 'order-service'
     restart: always
     ports:
@@ -55,7 +56,7 @@ services:
       rabbitmq:
         condition: service_healthy
   makeline-service:
-    build: services/makeline-service
+    build: ../makeline-service
     container_name: 'makeline-service'
     restart: always
     ports:
@@ -81,7 +82,7 @@ services:
       mongodb:
         condition: service_healthy
   product-service:
-    build: services/product-service
+    build: ../product-service
     container_name: 'product-service'
     restart: always
     ports:
@@ -91,91 +92,39 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    environment:
-      - AI_SERVICE_URL=http://ai-service:5001/
     networks:
       - backend_services
-  store-front:
-    build: services/store-front
-    container_name: 'store-front'
-    restart: always
-    ports:
-      - 8080:8080
-    healthcheck:
-      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://store-front:80/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    environment:
-      - VUE_APP_PRODUCT_SERVICE_URL=http://product-service:3002/
-      - VUE_APP_ORDER_SERVICE_URL=http://order-service:3000/
-    networks:
-      - backend_services
-    depends_on:
-      - product-service
-      - order-service
-  store-admin:
-    build: services/store-admin
-    container_name: 'store-admin'
-    restart: always
-    ports:
-      - 8081:8081
-    healthcheck:
-      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://store-admin:80/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    environment:
-      - VUE_APP_PRODUCT_SERVICE_URL=http://product-service:3002/
-      - VUE_APP_MAKELINE_SERVICE_URL=http://makeline-service:3001/
-    networks:
-      - backend_services
-    depends_on:
-      - product-service
-      - makeline-service
   virtual-customer:
-    build: simulators/virtual-customer
+    build: ../../simulators/virtual-customer
     container_name: 'virtual-customer'
     restart: always
     environment:
       - ORDER_SERVICE_URL=http://order-service:3000/
-      - ORDERS_PER_HOUR=500
+      - ORDERS_PER_HOUR=3600
     networks:
       - backend_services
     depends_on:
       order-service:
         condition: service_healthy
-  virtual-worker:
-    build: simulators/virtual-worker
-    container_name: 'virtual-worker'
-    restart: always
-    environment:
-      - MAKELINE_SERVICE_URL=http://makeline-service:3001
-      - ORDERS_PER_HOUR=400
-    networks:
-      - backend_services
-    depends_on:
-      makeline-service:
-        condition: service_healthy
-  ai-service:
-    build: services/ai-service
-    container_name: 'ai-service'
-    restart: always
-    ports:
-      - 5001:5001
-    healthcheck:
-      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://ai-service:5001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    environment:
-      - USE_AZURE_OPENAI=True # set to False if you are not using Azure OpenAI
-      - AZURE_OPENAI_DEPLOYMENT_NAME= # required if using Azure OpenAI
-      - AZURE_OPENAI_ENDPOINT= # required if using Azure OpenAI
-      - OPENAI_API_KEY= # required if using OpenAI and not required if using Azure OpenAI with Azure AD 
-      - OPENAI_ORG_ID= # required if using OpenAI
-    networks:
-      - backend_services
+  # ai-service:
+  #   build: ../ai-service
+  #   container_name: 'ai-service'
+  #   restart: always
+  #   ports:
+  #     - 5001:5001
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://ai-service:5001/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #   environment:
+  #     - USE_AZURE_OPENAI=True # set to False if you are not using Azure OpenAI
+  #     - AZURE_OPENAI_DEPLOYMENT_NAME= # required if using Azure OpenAI
+  #     - AZURE_OPENAI_ENDPOINT= # required if using Azure OpenAI
+  #     - OPENAI_API_KEY= # always required
+  #     - OPENAI_ORG_ID= # required if using OpenAI
+  #   networks:
+  #     - backend_services
 networks:
   backend_services:
     driver: bridge
