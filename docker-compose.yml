@@ -161,30 +161,30 @@ services:
     depends_on:
       - product-service
       - makeline-service
-  virtual-customer:
-    build: simulators/virtual-customer
-    container_name: 'virtual-customer'
-    restart: always
-    environment:
-      - ORDER_SERVICE_URL=http://order-service:3000/
-      - ORDERS_PER_HOUR=500
-    networks:
-      - backend_services
-    depends_on:
-      order-service:
-        condition: service_healthy
-  virtual-worker:
-    build: simulators/virtual-worker
-    container_name: 'virtual-worker'
-    restart: always
-    environment:
-      - MAKELINE_SERVICE_URL=http://makeline-service:3001
-      - ORDERS_PER_HOUR=400
-    networks:
-      - backend_services
-    depends_on:
-      makeline-service:
-        condition: service_healthy
+  # virtual-customer:
+  #   build: simulators/virtual-customer
+  #   container_name: 'virtual-customer'
+  #   restart: always
+  #   environment:
+  #     - ORDER_SERVICE_URL=http://order-service:3000/
+  #     - ORDERS_PER_HOUR=500
+  #   networks:
+  #     - backend_services
+  #   depends_on:
+  #     order-service:
+  #       condition: service_healthy
+  # virtual-worker:
+  #   build: simulators/virtual-worker
+  #   container_name: 'virtual-worker'
+  #   restart: always
+  #   environment:
+  #     - MAKELINE_SERVICE_URL=http://makeline-service:3001
+  #     - ORDERS_PER_HOUR=400
+  #   networks:
+  #     - backend_services
+  #   depends_on:
+  #     makeline-service:
+  #       condition: service_healthy
   # ai-service:
   #   build: services/ai-service
   #   container_name: 'ai-service'
