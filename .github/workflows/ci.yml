@@ -1,15 +1,17 @@
 name: Test
 
 on:
-  # pull_request:
-  #   branches:
-  #     - master
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    defaults:
+          run:
+            working-directory: ./services/order-service
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
