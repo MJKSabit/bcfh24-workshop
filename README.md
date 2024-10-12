@@ -13,7 +13,7 @@ This application is forked from the [AKS Store Demo](https://github.com/Azure-Sa
 
 ## Architecture
 
-The application has the following services: 
+The application has the following services:
 
 | Service | Description |
 | --- | --- |
@@ -21,7 +21,7 @@ The application has the following services:
 | `order-service` | This service is used for placing orders (Javascript) |
 | `product-service` | This service is used to perform CRUD operations on products (Java) |
 | `store-front` | Web app for customers to place orders (Vue.js) |
-| `store-admin` | Web app used by store employees to view orders in queue and manage products (Vue.js) | 
+| `store-admin` | Web app used by store employees to view orders in queue and manage products (Vue.js) |
 | `virtual-customer` | Simulates order creation on a scheduled basis (Rust) |
 | `virtual-worker` | Simulates order completion on a scheduled basis (Rust) |
 | `ai-service` | Optional service for adding generative text and graphics creation (Python) |
@@ -33,7 +33,7 @@ The application has the following services:
 
 ## Run the app locally
 
-The application is designed to be [run in an AKS cluster](#run-the-app-on-aks), but can also be run locally using Docker Compose.
+The application can be run locally using Docker Compose.
 
 > [!TIP]
 > You must have [Docker Desktop](https://www.docker.com/products/docker-desktop) installed to run this app locally. If you do not have it installed locally, you can try opening this repo in a [GitHub Codespace instead](#run-the-app-with-github-codespaces)
@@ -51,15 +51,15 @@ docker compose up
 To run the app, using nginx load balancer, you can run the below command:
 
 ```bash
-docker compose -f docker-compose-nginx.yml up
+docker compose -f docker-compose-nginx.yml up --scale order-service=3
 ```
 
 To stop the app, you can hit the `CTRL+C` key combination in the terminal window where the app is running.
 
 You can access the web apps at the following URLs:
 
-- Store Front: http://localhost:8080
-- Store Admin: http://localhost:8081
+- Store Front: <http://localhost:8080>
+- Store Admin: <http://localhost:8081>
 
 ## Run the app with GitHub Codespaces
 
