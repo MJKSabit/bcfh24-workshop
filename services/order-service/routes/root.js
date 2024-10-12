@@ -2,6 +2,7 @@
 
 module.exports = async function (fastify, opts) {
   fastify.post('/', async function (request, reply) {
+    console.log('Received new order:', request.body)
     const msg = request.body
     fastify.sendMessage(Buffer.from(JSON.stringify(msg)))
     reply.code(201)

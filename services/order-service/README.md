@@ -24,6 +24,7 @@ To run the necessary services, clone the repo, open a terminal, and navigate to 
 ```bash
 docker compose up
 ```
+<!-- docker compose -f .\docker-compose-nginx.yml up --scale order-service=3 -->
 
 With the services running, open a new terminal and navigate to the `order-service` directory. Then run the following commands:
 
