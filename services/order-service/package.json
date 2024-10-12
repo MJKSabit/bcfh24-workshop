@@ -7,7 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "tap \"test/**/*.test.js\" --disable-coverage",
+    "test": "tap --no-coverage test/**/*.test.js",
     "start": "fastify start -l info app.js",
     "dev": "fastify start -w -l info -P app.js"
   },
