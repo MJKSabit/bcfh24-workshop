@@ -1,0 +1,182 @@
+services:
+  order-service-loadbalancer:
+    image: nginx:alpine
+    container_name: 'order-service-loadbalancer'
+    restart: always
+    ports:
+      - 3000:80
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      # - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - backend_services
+    depends_on:
+      - order-service
+  pgdb:
+    image: postgres:alpine
+    container_name: postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: bcf24
+      POSTGRES_PASSWORD: bcf24
+      POSTGRES_DB: bcf24
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bcf24"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend_services
+
+  mongodb:
+    image: mongo:6.0.6
+    container_name: 'mongo'
+    restart: always
+    ports:
+      - 27017:27017
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - backend_services
+  rabbitmq:
+    image: rabbitmq:3.13.2-management-alpine
+    container_name: 'rabbitmq'
+    restart: always
+    environment:
+      - "RABBITMQ_DEFAULT_USER=username"
+      - "RABBITMQ_DEFAULT_PASS=password"
+    ports:
+      - 15672:15672
+      - 5672:5672
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./rabbitmq_enabled_plugins:/etc/rabbitmq/enabled_plugins
+    networks:
+      - backend_services
+  order-service:
+    build: services/order-service
+    restart: always
+    ports:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://order-service:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    environment:
+      - ORDER_QUEUE_HOSTNAME=rabbitmq
+      - ORDER_QUEUE_PORT=5672
+      - ORDER_QUEUE_USERNAME=username
+      - ORDER_QUEUE_PASSWORD=password
+      - ORDER_QUEUE_NAME=orders
+      - ORDER_QUEUE_RECONNECT_LIMIT=3
+    networks:
+      - backend_services
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  makeline-service:
+    build: services/makeline-service
+    container_name: 'makeline-service'
+    restart: always
+    ports:
+      - 3001:3001
+    healthcheck:
+      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://makeline-service:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    environment:
+      - ORDER_QUEUE_URI=amqp://rabbitmq:5672
+      - ORDER_QUEUE_USERNAME=username
+      - ORDER_QUEUE_PASSWORD=password
+      - ORDER_QUEUE_NAME=orders
+      - ORDER_DB_URI=mongodb://mongodb:27017
+      - ORDER_DB_NAME=orderdb
+      - ORDER_DB_COLLECTION_NAME=orders
+    networks:
+      - backend_services
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+  product-service:
+    build: services/product-service
+    container_name: 'product-service'
+    restart: always
+    ports:
+      - 3002:3002
+    healthcheck:
+      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://product-service:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    environment:
+      - DB_HOST=pgdb
+      - DB_PORT=5432
+      - DB_NAME=bcf24
+      - DB_USER=bcf24
+      - DB_PASSWORD=bcf24
+      - PORT=3002
+    networks:
+      - backend_services
+    depends_on:
+      pgdb:
+        condition: service_healthy
+  store-front:
+    build: services/store-front
+    container_name: 'store-front'
+    restart: always
+    ports:
+      - 8080:8080
+    healthcheck:
+      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://store-front:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    environment:
+      - VUE_APP_PRODUCT_SERVICE_URL=http://product-service:3002/
+      - VUE_APP_ORDER_SERVICE_URL=http://order-service-loadbalancer:3000/
+    networks:
+      - backend_services
+    depends_on:
+      - product-service
+      - order-service
+      - order-service-loadbalancer
+  store-admin:
+    build: services/store-admin
+    container_name: 'store-admin'
+    restart: always
+    ports:
+      - 8081:8081
+    healthcheck:
+      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://store-admin:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    environment:
+      - VUE_APP_PRODUCT_SERVICE_URL=http://product-service:3002/
+      - VUE_APP_MAKELINE_SERVICE_URL=http://makeline-service:3001/
+    networks:
+      - backend_services
+    depends_on:
+      - product-service
+      - makeline-service
+volumes:
+  pg-data:
+networks:
+  backend_services:
+    driver: bridge
