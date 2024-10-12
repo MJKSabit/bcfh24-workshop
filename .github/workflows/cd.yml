@@ -1,10 +1,10 @@
 name: Deploy
 
 on:
-  push:
-    branches:
-      - main
-    workflow_dispatch:
+  # push: 
+  #   branches:
+  #     - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -17,7 +17,7 @@ jobs:
       - name: Install latest Docker compose
         run: |
           VERSION=$(curl --silent https://api.github.com/repos/docker/compose/releases/latest | grep -Po '"tag_name": "\K.*\d')
-          INSTALLED_VERSION=$(docker-compose --version 2>/dev/null | grep -Po '\d+\.\d+\.\d+')
+          INSTALLED_VERSION=v$(docker-compose --version 2>/dev/null | grep -Po '\d+\.\d+\.\d+')
           if [ "$INSTALLED_VERSION" != "$VERSION" ]; then
             echo "Installing/Updating docker-compose to version $VERSION from $INSTALLED_VERSION"
             DESTINATION=/usr/local/bin/docker-compose
